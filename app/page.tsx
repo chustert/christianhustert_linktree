@@ -11,8 +11,16 @@ const links = [
     href: "https://newgameday.com/",
   },
   {
+    label: "CV, XP & Log on CH1337",
+    href: "https://ch1337.com/",
+  },
+  {
     label: "Building dope tech at Scanabull",
     href: "https://scanabull.com/",
+  },
+  {
+    label: "Showing off my coding skills on GitHub",
+    href: "https://github.com/chustert",
   },
   {
     label: "Pretending to do networking on LinkedIn",
