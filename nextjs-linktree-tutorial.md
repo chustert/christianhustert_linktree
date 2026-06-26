@@ -18,7 +18,7 @@ The stack:
 - Tailwind CSS
 - Vercel
 
-The visual direction is based on a playful, minimal layout with a warm yellow background, bold black outlines, pill-shaped buttons, and a button hover effect where the button appears to move upward while the shadow collapses.
+The visual direction is based on a playful, minimal layout with a warm yellow background, bold black outlines, pill-shaped buttons, image-based social icons, and a button hover effect where the button presses downward while the shadow collapses.
 
 ## 1. Install Node.js
 
@@ -42,20 +42,34 @@ Both commands should print version numbers.
 Navigate to the folder where you keep your projects.
 
 ```bash
+cd ~/Projects/project-name
+```
+
+Create a new app:
+
+```bash
+npx create-next-app@latest .
+```
+
+or 
+
+```bash
 cd ~/Projects
 ```
 
 Create a new app:
 
 ```bash
-npx create-next-app@latest christianhustert-linktree
+npx create-next-app@latest project-name
 ```
+(e.g. christianhustert-linktree)
 
 The setup wizard will ask a few questions. Choose:
 
 ```text
 Would you like to use TypeScript? Yes
 Would you like to use ESLint? Yes
+Would you like to use React Compiler? No
 Would you like to use Tailwind CSS? Yes
 Would you like your code inside a `src/` directory? No
 Would you like to use App Router? Yes
@@ -89,6 +103,8 @@ With the App Router, the files you will edit most are:
 
 ```text
 app/
+  components/
+    theme-toggle.tsx
   globals.css
   layout.tsx
   page.tsx
@@ -99,6 +115,7 @@ package.json
 What each file does:
 
 - `app/page.tsx` is the homepage.
+- `app/components/theme-toggle.tsx` is the client-side dark/light mode toggle.
 - `app/layout.tsx` wraps the whole app and defines metadata.
 - `app/globals.css` contains global CSS and Tailwind setup.
 - `public/` is where you put static assets like your logo, favicon, and images.
@@ -134,7 +151,17 @@ html {
 }
 
 body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   min-height: 100vh;
+}
+
+@layer base {
+  h1 {
+    @apply mt-5 mb-2.5 text-2xl font-bold leading-6 text-black;
+  }
 }
 ```
 
@@ -147,8 +174,8 @@ The important line is:
 This allows Tailwind classes like:
 
 ```tsx
-dark:bg-neutral-950
-dark:text-white
+dark:bg-[#f3595a]
+dark:bg-[#ffd166]
 ```
 
 to respond when the `dark` class exists on the `<html>` element.
@@ -158,7 +185,7 @@ to respond when the `dark` class exists on the `<html>` element.
 Create a new file:
 
 ```text
-app/theme-toggle.tsx
+app/components/theme-toggle.tsx
 ```
 
 Add:
@@ -166,22 +193,10 @@ Add:
 ```tsx
 "use client";
 
-import { useEffect, useState } from "react";
-
 export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
   function toggleTheme() {
-    const nextIsDark = !isDark;
-
-    document.documentElement.classList.toggle("dark", nextIsDark);
+    const nextIsDark = document.documentElement.classList.toggle("dark");
     localStorage.setItem("theme", nextIsDark ? "dark" : "light");
-
-    setIsDark(nextIsDark);
   }
 
   return (
@@ -189,13 +204,9 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-label="Toggle dark mode"
-      className="fixed right-5 top-5 z-10 flex h-8 w-14 items-center rounded-full border-2 border-black bg-[#ffd46b] p-1 transition-colors dark:border-white dark:bg-neutral-800"
+      className="fixed right-4 top-4 z-50 h-8 w-16 cursor-pointer rounded-full border-2 border-black"
     >
-      <span
-        className={`h-5 w-5 rounded-full bg-black transition-transform dark:bg-white ${
-          isDark ? "translate-x-6" : "translate-x-0"
-        }`}
-      />
+      <span className="absolute inset-0.5 h-6 w-6 rounded-full bg-black transition-transform duration-[400ms] ease-in-out dark:translate-x-8" />
     </button>
   );
 }
@@ -203,11 +214,12 @@ export function ThemeToggle() {
 
 Why this file needs `"use client"`:
 
-- The toggle uses `useState`.
 - It reads and writes `localStorage`.
 - It modifies `document.documentElement`.
 
 Those are browser-only features, so the component must be a Client Component.
+
+The toggle does not need React state. The `<html>` element's `.dark` class is the source of truth, and Tailwind's `dark:` classes respond to that class.
 
 ## 7. Prevent Theme Flash On Page Load
 
@@ -220,6 +232,12 @@ Open `app/layout.tsx` and use this structure:
 ```tsx
 import type { Metadata } from "next";
 import "./globals.css";
+import { Ubuntu } from 'next/font/google'
+
+const ubuntu = Ubuntu({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
 
 export const metadata: Metadata = {
   title: "Christian Hustert",
@@ -231,13 +249,10 @@ const themeScript = `
     try {
       const savedTheme = localStorage.getItem("theme");
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const isDark = savedTheme === "dark" || (!savedTheme && prefersDark);
 
-      if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    } catch (_) {}
+      document.documentElement.classList.toggle("dark", isDark);
+    } catch {}
   })();
 `;
 
@@ -251,7 +266,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>{children}</body>
+      <body className={`${ubuntu.className} bg-[#ffd166] transition-colors duration-[400ms] dark:bg-[#f3595a]`}>{children}</body>
     </html>
   );
 }
@@ -263,6 +278,8 @@ What this does:
 - Falls back to the user's system preference.
 - Adds `.dark` to the `<html>` element before the page visibly renders.
 - Uses `suppressHydrationWarning` because the server-rendered HTML may not initially know whether the client prefers dark mode.
+- Loads Ubuntu through `next/font/google` and applies it site-wide on `<body>`.
+- Transitions the body background color over `400ms` when the theme changes.
 
 ## 8. Add Your Avatar Or Logo
 
@@ -271,13 +288,22 @@ Place your avatar or logo in the `public/` folder.
 For example:
 
 ```text
-public/avatar.png
+public/ch-avatar.svg
 ```
 
 Anything inside `public/` can be referenced from the site root:
 
 ```tsx
-src="/avatar.png"
+src="/ch-avatar.svg"
+```
+
+This project also uses image files for the social icons:
+
+```text
+public/github-logo.webp
+public/linkedin-icon-black.webp
+public/instagram-icon.webp
+public/x-icon.webp
 ```
 
 For a real personal homepage, you may also want:
@@ -296,118 +322,141 @@ Replace `app/page.tsx` with:
 
 ```tsx
 import Image from "next/image";
-import { ThemeToggle } from "./theme-toggle";
+import { ThemeToggle } from "./components/theme-toggle";
 
 const links = [
   {
-    label: "Spreading doom and gloom on X",
-    href: "https://x.com/your-handle",
+    label: "Fixing website search for everyone",
+    href: "https://www.flowsearch.io/",
   },
   {
-    label: "Becoming a tech authority on Medium",
-    href: "https://medium.com/@your-handle",
+    label: "Creating the ultimate video game release calendar",
+    href: "https://newgameday.com/",
+  },
+  {
+    label: "Building dope tech at Scanabull",
+    href: "https://scanabull.com/",
+  },
+  {
+    label: "Pretending to do networking on LinkedIn",
+    href: "https://www.linkedin.com/in/christianhustert/",
   },
   {
     label: "Occasionally posting photos on Instagram",
-    href: "https://instagram.com/your-handle",
+    href: "https://www.instagram.com/chrishusi/",
   },
   {
-    label: "Trying to do networking on LinkedIn",
-    href: "https://linkedin.com/in/your-handle",
+    label: "Spreading doom and gloom on X",
+    href: "https://x.com/chrishustert",
   },
 ];
 
 const socials = [
   {
-    label: "Instagram",
-    href: "https://instagram.com/your-handle",
-    text: "IG",
-  },
-  {
-    label: "X",
-    href: "https://x.com/your-handle",
-    text: "X",
+    label: "GitHub",
+    href: "https://github.com/chustert",
+    icon: "/github-logo.webp",
   },
   {
     label: "LinkedIn",
-    href: "https://linkedin.com/in/your-handle",
-    text: "in",
+    href: "https://www.linkedin.com/in/christianhustert/",
+    icon: "/linkedin-icon-black.webp",
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/chrishusi/",
+    icon: "/instagram-icon.webp",
+  },
+  {
+    label: "X",
+    href: "https://x.com/chrishustert",
+    icon: "/x-icon.webp",
   },
 ];
 
 export default function Home() {
   return (
-    <main className="flex min-h-dvh items-start justify-center bg-[#ffd46b] px-6 py-16 text-black transition-colors dark:bg-neutral-950 dark:text-white">
-      <ThemeToggle />
+    <>
+      <main className="flex min-h-dvh items-start justify-center text-black">
+        <ThemeToggle />
 
-      <section className="flex w-full max-w-xl flex-col items-center">
-        <div className="rounded-full border-4 border-white bg-[#ff4d5a] p-3 shadow-sm">
-          <Image
-            src="/avatar.png"
-            alt="Christian Hustert logo"
-            width={88}
-            height={88}
-            priority
-            className="rounded-full"
-          />
-        </div>
+        <section className="flex w-full max-w-xl flex-col items-center py-16">
+          <div className="mb-4 rounded-full border-7 border-white bg-[#f3595a] p-5 transition-colors duration-[400ms] dark:bg-[#ffd166]">
+            <Image
+              src="/ch-avatar.svg"
+              alt="Christian Hustert logo"
+              width={64}
+              height={64}
+              priority
+              className="h-16 w-16"
+            />
+          </div>
 
-        <h1 className="mt-8 text-center text-2xl font-black">
-          Christian Hustert
-        </h1>
+          <h1 className="text-center">Christian Hustert</h1>
 
-        <p className="mt-4 text-center text-sm font-bold">
-          Webflow Developer in Raglan, NZ.
-        </p>
+          <p className="mb-2.5 mt-4 text-center text-base font-medium leading-5">
+            Full Stack Developer in Raglan, NZ.
+          </p>
 
-        <nav className="mt-16 flex w-full flex-col gap-4">
-          {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border-2 border-black bg-white px-6 py-4 text-center text-lg font-medium text-black shadow-[0_8px_0_0_#000] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_0_0_0_#000] focus:outline-none focus-visible:ring-4 focus-visible:ring-black/30 dark:border-white dark:bg-neutral-100 dark:text-black dark:shadow-[0_8px_0_0_#fff]"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
+          <nav className="mt-16 flex w-full flex-col gap-4">
+            {links.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border-2 border-black bg-white p-4 text-center text-xl font-medium leading-5 text-black shadow-[0_6px_0_0_#000] transition-all duration-200 hover:translate-y-1 hover:shadow-[0_0_0_0_#000]"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
 
-        <div className="mt-12 flex gap-5">
-          {socials.map((social) => (
-            <a
-              key={social.href}
-              href={social.href}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={social.label}
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-sm font-bold text-white transition-transform hover:-translate-y-1 dark:bg-white dark:text-black"
-            >
-              {social.text}
-            </a>
-          ))}
-        </div>
-      </section>
-    </main>
+          <div className="mt-12 flex gap-6">
+            {socials.map((social) => (
+              <a
+                key={social.href}
+                href={social.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={social.label}
+                className="flex items-center justify-center rounded-full bg-black p-3.5 text-sm font-bold text-white transition-transform hover:scale-110"
+              >
+                <Image
+                  src={social.icon}
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="h-6 w-6 object-contain invert"
+                />
+              </a>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <footer className="py-4 text-center text-sm font-normal leading-5 text-black">
+        © {new Date().getFullYear()} Christian Hustert. All rights reserved.
+      </footer>
+    </>
   );
 }
 ```
 
-Then replace every placeholder URL with your real links.
+The social images use an empty `alt` because each link already has an `aria-label`.
 
 ## 10. Understand The Button Hover Effect
 
 This class creates the bold shadow:
 
 ```tsx
-shadow-[0_8px_0_0_#000]
+shadow-[0_6px_0_0_#000]
 ```
 
-This class moves the button upward on hover:
+This class moves the button downward on hover:
 
 ```tsx
-hover:-translate-y-1
+hover:translate-y-1
 ```
 
 This class removes the shadow on hover:
@@ -416,7 +465,7 @@ This class removes the shadow on hover:
 hover:shadow-[0_0_0_0_#000]
 ```
 
-Together, they create the effect where the button feels like it is moving upward from a chunky black shadow.
+Together, they create the effect where the button feels like it is pressing down into the chunky black shadow.
 
 The transition is handled by:
 
@@ -427,25 +476,25 @@ transition-all duration-200
 You can make the movement stronger by changing:
 
 ```tsx
-hover:-translate-y-1
+hover:translate-y-1
 ```
 
 to:
 
 ```tsx
-hover:-translate-y-2
+hover:translate-y-2
 ```
 
 You can make the resting shadow larger by changing:
 
 ```tsx
-shadow-[0_8px_0_0_#000]
+shadow-[0_6px_0_0_#000]
 ```
 
 to:
 
 ```tsx
-shadow-[0_10px_0_0_#000]
+shadow-[0_8px_0_0_#000]
 ```
 
 ## 11. Improve Mobile Layout
@@ -453,14 +502,14 @@ shadow-[0_10px_0_0_#000]
 The example already works well on mobile because it uses:
 
 ```tsx
-w-full max-w-xl px-6
+w-full max-w-xl
 ```
 
 This means:
 
 - The content can shrink on small screens.
 - The content will not become too wide on desktop.
-- The page keeps padding on the left and right.
+- The content can stay centered and capped on larger screens.
 
 If the button text feels too large on small screens, use responsive text classes:
 
@@ -470,34 +519,57 @@ className="... text-base sm:text-lg ..."
 
 ## 12. Add Better Social Icons
 
-The tutorial uses simple text labels like `IG`, `X`, and `in`.
+This project uses local image assets instead of an icon package.
 
-For nicer icons, install Lucide React:
+Put the icon files in `public/`:
 
-```bash
-npm install lucide-react
+```text
+public/github-logo.webp
+public/linkedin-icon-black.webp
+public/instagram-icon.webp
+public/x-icon.webp
 ```
 
-Then you can import icons:
+Then reference them from the `socials` array:
 
 ```tsx
-import { Instagram, Linkedin } from "lucide-react";
+const socials = [
+  {
+    label: "GitHub",
+    href: "https://github.com/chustert",
+    icon: "/github-logo.webp",
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/christianhustert/",
+    icon: "/linkedin-icon-black.webp",
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/chrishusi/",
+    icon: "/instagram-icon.webp",
+  },
+  {
+    label: "X",
+    href: "https://x.com/chrishustert",
+    icon: "/x-icon.webp",
+  },
+];
 ```
 
-Lucide may not include every brand icon. For full brand coverage, use:
-
-```bash
-npm install react-icons
-```
-
-Then:
+Render each icon with `next/image`:
 
 ```tsx
-import { FaInstagram, FaLinkedinIn } from "react-icons/fa";
-import { FaXTwitter } from "react-icons/fa6";
+<Image
+  src={social.icon}
+  alt=""
+  width={24}
+  height={24}
+  className="h-6 w-6 object-contain invert"
+/>
 ```
 
-For a very small personal site, `react-icons` is convenient.
+The `invert` class applies `filter: invert(100%)`, which makes black icon files appear white on the black circular background.
 
 ## 13. Add SEO Metadata
 
@@ -506,11 +578,11 @@ In `app/layout.tsx`, expand the metadata:
 ```tsx
 export const metadata: Metadata = {
   title: "Christian Hustert",
-  description: "Webflow Developer in Raglan, New Zealand.",
+  description: "Personal homepage of Christian Hustert.",
   metadataBase: new URL("https://christianhustert.com"),
   openGraph: {
     title: "Christian Hustert",
-    description: "Webflow Developer in Raglan, New Zealand.",
+    description: "Personal homepage of Christian Hustert.",
     url: "https://christianhustert.com",
     siteName: "Christian Hustert",
     images: [
@@ -527,7 +599,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Christian Hustert",
-    description: "Webflow Developer in Raglan, New Zealand.",
+    description: "Personal homepage of Christian Hustert.",
     images: ["/og-image.png"],
   },
 };
@@ -721,7 +793,7 @@ Before sharing the site, check:
 
 Once the basic page is live, you can add:
 
-- Real brand icons instead of text social labels.
+- Additional social links or project links.
 - Subtle entrance animations.
 - Analytics with Vercel Analytics.
 - A contact link.
