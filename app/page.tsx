@@ -63,7 +63,7 @@ const socials = [
 export default function Home() {
   return (
     <>
-    <main className="flex min-h-dvh items-start justify-center text-black">
+    <main className="flex items-start justify-center text-black">
       <ThemeToggle />
 
       <section className="py-16 flex w-full max-w-xl flex-col items-center">

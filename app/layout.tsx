@@ -34,7 +34,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${ubuntu.className} bg-[#ffd166] transition-colors duration-[400ms] dark:bg-[#f3595a]`}>{children}</body>
+      <body className={`${ubuntu.className} bg-[#ffd166] transition-colors duration-[400ms] dark:bg-[#f3595a] min-h-dvh`}>{children}</body>
     </html>
   );
 }
