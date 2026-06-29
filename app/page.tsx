@@ -94,7 +94,7 @@ export default function Home() {
                 href={link.href}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full border-2 border-black bg-white p-4 text-center text-xl leading-5 font-medium text-black shadow-[0_6px_0_0_#000] transition-all duration-200 hover:translate-y-1 hover:shadow-[0_0_0_0_#000]"
+                className="rounded-full border-2 border-black bg-white py-4 px-8 text-center text-xl leading-5 font-medium text-black shadow-[0_6px_0_0_#000] transition-all duration-200 hover:translate-y-1 hover:shadow-[0_0_0_0_#000]"
               >
                 {link.label}
               </a>
